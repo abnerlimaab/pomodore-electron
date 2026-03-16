@@ -19,16 +19,27 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ThemeMenu from './ThemeMenu';
 import useAppStore from '../store/useAppStore';
 
-const RAIL_COLLAPSED = 60;
-const RAIL_EXPANDED  = 200;
+export const RAIL_COLLAPSED = 60;
+export const RAIL_EXPANDED = 200;
 
-const navItems = [
+interface NavItem {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+}
+
+const navItems: NavItem[] = [
   { id: 'timer',      label: 'Cronômetro', icon: <TimerIcon /> },
   { id: 'activities', label: 'Atividades',  icon: <CategoryIcon /> },
   { id: 'reports',    label: 'Histórico',   icon: <BarChartIcon /> },
 ];
 
-export default function NavigationRail({ currentPage, onNavigate }) {
+interface NavigationRailProps {
+  currentPage: string;
+  onNavigate: (page: string) => void;
+}
+
+export default function NavigationRail({ currentPage, onNavigate }: NavigationRailProps) {
   const { railExpanded, toggleRail } = useAppStore();
   const width = railExpanded ? RAIL_EXPANDED : RAIL_COLLAPSED;
 
@@ -53,7 +64,6 @@ export default function NavigationRail({ currentPage, onNavigate }) {
         transition: 'width 0.22s ease',
       }}
     >
-      {/* Header: logo + toggle */}
       <Box sx={{
         width: '100%',
         display: 'flex',
@@ -84,7 +94,6 @@ export default function NavigationRail({ currentPage, onNavigate }) {
 
       <Divider sx={{ width: '80%', mb: 1.5, alignSelf: 'center' }} />
 
-      {/* Navigation items */}
       <List sx={{ width: '100%', px: 0.5, flex: 1 }} disablePadding>
         {navItems.map(item => {
           const btn = (
@@ -153,5 +162,3 @@ export default function NavigationRail({ currentPage, onNavigate }) {
     </Box>
   );
 }
-
-export { RAIL_COLLAPSED, RAIL_EXPANDED };

@@ -11,16 +11,23 @@ import {
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import useAppStore from '../../store/useAppStore';
+import type { Atividade } from '../../types';
 
-export default function ActivityChips({ atividades }) {
+interface ActivityChipsProps {
+  atividades: unknown[];
+}
+
+export default function ActivityChips({ atividades }: ActivityChipsProps) {
   const { selectedActivities, addActivity, removeActivity, setPrimary } = useAppStore();
   const [inputValue, setInputValue] = useState('');
 
-  const activeAtividades = atividades.filter(
+  const typedAtividades = atividades as Atividade[];
+
+  const activeAtividades = typedAtividades.filter(
     (a) => a.status === 'ativa' && !selectedActivities.find((s) => s.id === a.id)
   );
 
-  const handleSelect = (event, value) => {
+  const handleSelect = (_event: React.SyntheticEvent, value: Atividade | null) => {
     if (!value) return;
     addActivity({
       id: value.id,
@@ -37,7 +44,6 @@ export default function ActivityChips({ atividades }) {
         Atividades
       </Typography>
 
-      {/* Selected activity chips */}
       {selectedActivities.length > 0 && (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5, justifyContent: 'center' }}>
           {selectedActivities.map((activity) => (
@@ -48,17 +54,13 @@ export default function ActivityChips({ atividades }) {
                   <Tooltip title={activity.prioridade === 'Primaria' ? 'Primária' : 'Definir como Primária'}>
                     <IconButton
                       size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPrimary(activity.id);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); setPrimary(activity.id); }}
                       sx={{ p: 0, color: activity.prioridade === 'Primaria' ? 'warning.main' : 'text.disabled' }}
                     >
-                      {activity.prioridade === 'Primaria' ? (
-                        <StarIcon sx={{ fontSize: 14 }} />
-                      ) : (
-                        <StarBorderIcon sx={{ fontSize: 14 }} />
-                      )}
+                      {activity.prioridade === 'Primaria'
+                        ? <StarIcon sx={{ fontSize: 14 }} />
+                        : <StarBorderIcon sx={{ fontSize: 14 }} />
+                      }
                     </IconButton>
                   </Tooltip>
                   <span>{activity.nome}</span>
@@ -67,9 +69,7 @@ export default function ActivityChips({ atividades }) {
               onDelete={() => removeActivity(activity.id)}
               size="small"
               sx={{
-                backgroundColor: activity.tema_cor
-                  ? `${activity.tema_cor}33`
-                  : 'action.selected',
+                backgroundColor: activity.tema_cor ? `${activity.tema_cor}33` : 'action.selected',
                 borderColor: activity.tema_cor || 'divider',
                 border: '1px solid',
                 fontWeight: activity.prioridade === 'Primaria' ? 600 : 400,
@@ -79,7 +79,6 @@ export default function ActivityChips({ atividades }) {
         </Box>
       )}
 
-      {/* Activity selector */}
       <Autocomplete
         options={activeAtividades}
         getOptionLabel={(option) =>
@@ -96,38 +95,24 @@ export default function ActivityChips({ atividades }) {
             placeholder="Adicionar atividade..."
             size="small"
             variant="outlined"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 6,
-              },
-            }}
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 6 } }}
           />
         )}
         renderOption={(props, option) => (
           <li {...props} key={option.id}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {option.tema_cor && (
-                <Box
-                  sx={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: '50%',
-                    backgroundColor: option.tema_cor,
-                    flexShrink: 0,
-                  }}
-                />
+                <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: option.tema_cor, flexShrink: 0 }} />
               )}
               <Typography variant="body2">{option.nome}</Typography>
               {option.tema_nome && (
-                <Typography variant="caption" color="text.secondary">
-                  {option.tema_nome}
-                </Typography>
+                <Typography variant="caption" color="text.secondary">{option.tema_nome}</Typography>
               )}
             </Box>
           </li>
         )}
         noOptionsText={
-          atividades.length === 0
+          typedAtividades.length === 0
             ? 'Nenhuma atividade cadastrada. Crie em Atividades.'
             : 'Todas as atividades já selecionadas'
         }

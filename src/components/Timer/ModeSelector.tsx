@@ -13,7 +13,17 @@ import {
   TextField,
   Typography,
   Stack,
+  SelectChangeEvent,
 } from '@mui/material';
+import type { ModeKey } from '../../store/useAppStore';
+
+interface ModeSelectorProps {
+  currentMode: ModeKey;
+  isRunning: boolean;
+  onModeChange: (mode: ModeKey) => void;
+  customSeconds: number;
+  onCustomSecondsChange: (seconds: number) => void;
+}
 
 const modeList = [
   { id: 'pomodoro-25', label: 'Pomodoro 25 min', group: 'Pomodoro' },
@@ -25,13 +35,19 @@ const modeList = [
   { id: 'free',       label: 'Livre',            group: 'Outro' },
 ];
 
-export default function ModeSelector({ currentMode, isRunning, onModeChange, customSeconds, onCustomSecondsChange }) {
+export default function ModeSelector({
+  currentMode,
+  isRunning,
+  onModeChange,
+  customSeconds,
+  onCustomSecondsChange,
+}: ModeSelectorProps) {
   const [customOpen, setCustomOpen] = useState(false);
   const [customMinutes, setCustomMinutes] = useState(Math.floor((customSeconds || 1500) / 60));
   const [customSecs, setCustomSecs] = useState((customSeconds || 1500) % 60);
 
-  const handleChange = (e) => {
-    const mode = e.target.value;
+  const handleChange = (e: SelectChangeEvent<string>) => {
+    const mode = e.target.value as ModeKey;
     if (mode === 'custom') {
       setCustomOpen(true);
       return;
@@ -40,7 +56,7 @@ export default function ModeSelector({ currentMode, isRunning, onModeChange, cus
   };
 
   const handleCustomConfirm = () => {
-    const totalSeconds = (parseInt(customMinutes) || 0) * 60 + (parseInt(customSecs) || 0);
+    const totalSeconds = (parseInt(String(customMinutes)) || 0) * 60 + (parseInt(String(customSecs)) || 0);
     if (totalSeconds > 0) {
       onCustomSecondsChange(totalSeconds);
       onModeChange('custom');
@@ -104,12 +120,8 @@ export default function ModeSelector({ currentMode, isRunning, onModeChange, cus
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setCustomOpen(false)} variant="outlined">
-            Cancelar
-          </Button>
-          <Button onClick={handleCustomConfirm} variant="contained">
-            Confirmar
-          </Button>
+          <Button onClick={() => setCustomOpen(false)} variant="outlined">Cancelar</Button>
+          <Button onClick={handleCustomConfirm} variant="contained">Confirmar</Button>
         </DialogActions>
       </Dialog>
     </>

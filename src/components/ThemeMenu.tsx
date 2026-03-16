@@ -11,9 +11,13 @@ import CheckIcon from '@mui/icons-material/Check';
 import { PALETTES } from '../theme';
 import useAppStore from '../store/useAppStore';
 
-export default function ThemeMenu({ expanded = false }) {
+interface ThemeMenuProps {
+  expanded?: boolean;
+}
+
+export default function ThemeMenu({ expanded = false }: ThemeMenuProps) {
   const { palette, setPalette, colorScheme } = useAppStore();
-  const [anchor, setAnchor] = useState(null);
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
 
   const trigger = (
     <Box
@@ -115,7 +119,7 @@ export default function ThemeMenu({ expanded = false }) {
           {[{ id: 'light', label: 'Claro' }, { id: 'dark', label: 'Escuro' }].map(({ id, label }) => (
             <Box
               key={id}
-              onClick={() => useAppStore.getState().setColorScheme(id)}
+              onClick={() => useAppStore.getState().setColorScheme(id as 'light' | 'dark')}
               sx={{
                 flex: 1,
                 py: 0.75,

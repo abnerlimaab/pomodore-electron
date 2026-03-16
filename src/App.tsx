@@ -7,13 +7,14 @@ import ReportsPage from './pages/ReportsPage';
 import { createAppTheme } from './theme';
 import useAppStore from './store/useAppStore';
 
+type Page = 'timer' | 'activities' | 'reports';
+
 export default function App() {
-  const [currentPage, setCurrentPage] = useState('timer');
+  const [currentPage, setCurrentPage] = useState<Page>('timer');
   const { colorScheme, palette, railExpanded, setGrupos, setAtividades } = useAppStore();
 
   const theme = createAppTheme(colorScheme, palette);
 
-  // Load initial data
   useEffect(() => {
     const loadData = async () => {
       if (!window.electronAPI?.db) return;
@@ -22,8 +23,8 @@ export default function App() {
           window.electronAPI.db.getTemas(),
           window.electronAPI.db.getAtividades({}),
         ]);
-        if (grupos && !grupos.error) setGrupos(grupos);
-        if (atividades && !atividades.error) setAtividades(atividades);
+        if (grupos && !('error' in grupos)) setGrupos(grupos);
+        if (atividades && !('error' in atividades)) setAtividades(atividades);
       } catch (e) {
         console.error('Failed to load initial data:', e);
       }
@@ -31,13 +32,12 @@ export default function App() {
     loadData();
   }, []);
 
-  // Refresh atividades when navigating to timer (so chips are up to date)
   useEffect(() => {
     const refreshAtividades = async () => {
       if (currentPage === 'timer' && window.electronAPI?.db) {
         try {
           const data = await window.electronAPI.db.getAtividades({});
-          if (data && !data.error) setAtividades(data);
+          if (data && !('error' in data)) setAtividades(data);
         } catch (e) {
           console.error('Failed to refresh atividades:', e);
         }
@@ -48,27 +48,18 @@ export default function App() {
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'timer': return <TimerPage />;
+      case 'timer':      return <TimerPage />;
       case 'activities': return <ActivitiesPage />;
-      case 'reports': return <ReportsPage />;
-      default: return <TimerPage />;
+      case 'reports':    return <ReportsPage />;
+      default:           return <TimerPage />;
     }
   };
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box
-        sx={{
-          display: 'flex',
-          height: '100vh',
-          backgroundColor: 'background.default',
-        }}
-      >
-        {/* Navigation Rail */}
-        <NavigationRail currentPage={currentPage} onNavigate={setCurrentPage} />
-
-        {/* Main content */}
+      <Box sx={{ display: 'flex', height: '100vh', backgroundColor: 'background.default' }}>
+        <NavigationRail currentPage={currentPage} onNavigate={(p) => setCurrentPage(p as Page)} />
         <Box
           component="main"
           sx={{

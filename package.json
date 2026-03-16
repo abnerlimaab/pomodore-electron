@@ -2,30 +2,35 @@
   "name": "pomodore",
   "version": "1.0.0",
   "description": "A Pomodoro timer app built with Electron and React",
-  "main": "electron/main.js",
+  "main": "electron-dist/main.js",
   "scripts": {
-    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "build": "vite build && electron-builder",
+    "build:electron": "tsc -p tsconfig.node.json",
+    "dev": "concurrently \"vite\" \"tsc -p tsconfig.node.json --watch\" \"wait-on http://localhost:5173 && electron .\"",
+    "build": "vite build && tsc -p tsconfig.node.json && electron-builder",
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^18",
-    "react-dom": "^18",
-    "@mui/material": "^5",
-    "@mui/icons-material": "^5",
     "@emotion/react": "^11",
     "@emotion/styled": "^11",
+    "@mui/icons-material": "^5",
+    "@mui/material": "^5",
+    "electron-store": "^8",
+    "react": "^18",
+    "react-dom": "^18",
     "recharts": "^2",
-    "zustand": "^4",
     "sql.js": "^1.12.0",
-    "electron-store": "^8"
+    "zustand": "^4"
   },
   "devDependencies": {
-    "vite": "^5",
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4",
+    "concurrently": "^8",
     "electron": "^29",
     "electron-builder": "^24",
-    "concurrently": "^8",
+    "typescript": "^5.9.3",
+    "vite": "^5",
     "wait-on": "^7"
   },
   "build": {
@@ -37,7 +42,7 @@
     },
     "files": [
       "dist/**/*",
-      "electron/**/*",
+      "electron-dist/**/*",
       "icon.png",
       "package.json"
     ],
@@ -53,9 +58,11 @@
     },
     "extraResources": [
       {
-        "from": "electron/",
-        "to": "electron/",
-        "filter": ["**/*"]
+        "from": "electron-dist/",
+        "to": "electron-dist/",
+        "filter": [
+          "**/*"
+        ]
       }
     ]
   }

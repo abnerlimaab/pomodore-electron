@@ -1,14 +1,15 @@
-// TrayManager exports helper functions for updating the system tray
-// It does not render any UI
-
-export function formatTimeForTray(seconds) {
+export function formatTimeForTray(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined) return '--:--';
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-export async function updateTray(timeLeft, isRunning, modeName) {
+export async function updateTray(
+  timeLeft: number | null,
+  isRunning: boolean,
+  modeName: string
+): Promise<void> {
   if (!window.electronAPI) return;
   const timeText = `${modeName || 'Timer'} - ${formatTimeForTray(timeLeft)}`;
   try {

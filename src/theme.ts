@@ -1,7 +1,41 @@
-import { createTheme } from '@mui/material/styles';
+import { createTheme, Theme, ThemeOptions } from '@mui/material/styles';
 
-// ─── Material Design 3 palettes ──────────────────────────────────────────────
-export const PALETTES = {
+// ─── MUI Theme augmentation ───────────────────────────────────────────────────
+
+declare module '@mui/material/styles' {
+  interface Theme {
+    md3: Record<string, string>;
+  }
+  interface ThemeOptions {
+    md3?: Record<string, string>;
+  }
+}
+
+// ─── Palette token types ──────────────────────────────────────────────────────
+
+interface PaletteTokens {
+  primary: string;
+  onPrimary: string;
+  primaryContainer: string;
+  onPrimaryContainer: string;
+  secondary: string;
+  onSecondary: string;
+  secondaryContainer: string;
+  onSecondaryContainer: string;
+  outlineVariant: string;
+  [key: string]: string;
+}
+
+interface PaletteEntry {
+  label: string;
+  seed: string;
+  light: PaletteTokens;
+  dark: PaletteTokens;
+}
+
+// ─── Material Design 3 palettes ───────────────────────────────────────────────
+
+export const PALETTES: Record<string, PaletteEntry> = {
   violeta: {
     label: 'Violeta',
     seed: '#6750A4',
@@ -130,8 +164,9 @@ export const PALETTES = {
   },
 };
 
-// ─── Surface tokens (same for all palettes) ───────────────────────────────────
-const lightSurface = {
+// ─── Surface tokens ───────────────────────────────────────────────────────────
+
+const lightSurface: Record<string, string> = {
   surface: '#FFFBFE', onSurface: '#1C1B1F',
   surfaceVariant: '#E7E0EC', onSurfaceVariant: '#49454F',
   background: '#FFFBFE', onBackground: '#1C1B1F',
@@ -140,7 +175,7 @@ const lightSurface = {
   errorContainer: '#F9DEDC', onErrorContainer: '#410E0B',
 };
 
-const darkSurface = {
+const darkSurface: Record<string, string> = {
   surface: '#1C1B1F', onSurface: '#E6E1E5',
   surfaceVariant: '#49454F', onSurfaceVariant: '#CAC4D0',
   background: '#1C1B1F', onBackground: '#E6E1E5',
@@ -150,11 +185,12 @@ const darkSurface = {
 };
 
 // ─── Theme factory ────────────────────────────────────────────────────────────
-export function createAppTheme(mode = 'dark', paletteKey = 'violeta') {
-  const palette = PALETTES[paletteKey] || PALETTES.violeta;
-  const paletteTokens = mode === 'dark' ? palette.dark : palette.light;
-  const surfaceTokens = mode === 'dark' ? darkSurface : lightSurface;
-  const tokens = { ...surfaceTokens, ...paletteTokens };
+
+export function createAppTheme(mode: 'light' | 'dark' = 'dark', paletteKey = 'violeta'): Theme {
+  const palette = PALETTES[paletteKey] ?? PALETTES.violeta;
+  const paletteTokens: Record<string, string> = mode === 'dark' ? palette.dark : palette.light;
+  const surfaceTokens: Record<string, string> = mode === 'dark' ? darkSurface : lightSurface;
+  const tokens: Record<string, string> = { ...surfaceTokens, ...paletteTokens };
 
   return createTheme({
     palette: {
@@ -211,5 +247,5 @@ export function createAppTheme(mode = 'dark', paletteKey = 'violeta') {
       MuiListItemButton: { styleOverrides: { root: { borderRadius: 100 } } },
     },
     md3: tokens,
-  });
+  } as ThemeOptions);
 }
