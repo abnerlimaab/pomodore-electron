@@ -1,7 +1,10 @@
 import { ipcMain, BrowserWindow, Notification } from 'electron';
-import * as db from '../database';
 import { updateTrayMenu } from '../handlers/tray';
 import { IPC } from '../ipc-channels';
+import type { TemaUseCases } from '../application/TemaUseCases';
+import type { AtividadeUseCases } from '../application/AtividadeUseCases';
+import type { SessaoUseCases } from '../application/SessaoUseCases';
+import type { Tema, Atividade, Sessao } from '../domain/entities';
 
 // ─── Procedure helper ─────────────────────────────────────────────────────────
 
@@ -25,9 +28,17 @@ let timerTimeout: ReturnType<typeof setTimeout> | null = null;
 type SimpleStore = { get: (key: string) => unknown; set: (key: string, value: unknown) => void };
 let storeRef: SimpleStore | null = null;
 
-export function initRouter(mainWindow: BrowserWindow, store: SimpleStore): void {
+export interface AppUseCases {
+  temas: TemaUseCases;
+  atividades: AtividadeUseCases;
+  sessoes: SessaoUseCases;
+}
+let useCasesRef: AppUseCases | null = null;
+
+export function initRouter(mainWindow: BrowserWindow, store: SimpleStore, useCases: AppUseCases): void {
   windowRef = mainWindow;
   storeRef = store;
+  useCasesRef = useCases;
 }
 
 // ─── Router ───────────────────────────────────────────────────────────────────
@@ -35,18 +46,18 @@ export function initRouter(mainWindow: BrowserWindow, store: SimpleStore): void 
 export const appRouter = {
 
   db: {
-    getTemas:          procedure<void, object[]>(() => db.getTemas()),
-    createTema:        procedure<{ nome: string; cor_hex?: string }, object>(d => db.createTema(d)),
-    updateTema:        procedure<{ id: number; nome: string; cor_hex: string }, object>(d => db.updateTema(d)),
-    deleteTema:        procedure<number, object>(id => db.deleteTema(id)),
-    getAtividades:     procedure<{ tema_id?: number; status?: string }, object[]>(f => db.getAtividades(f ?? {})),
-    createAtividade:   procedure<{ tema_id?: number | null; nome: string; status?: string }, object>(d => db.createAtividade(d)),
-    updateAtividade:   procedure<{ id: number; tema_id?: number | null; nome: string; status: string }, object>(d => db.updateAtividade(d)),
-    deleteAtividade:   procedure<number, object>(id => db.deleteAtividade(id)),
-    createSessao:      procedure<{ tipo: string; inicio: string }, object>(d => db.createSessao(d)),
-    finalizeSessao:    procedure<{ id: number; fim: string; duracao_total_segundos: number }, object>(d => db.finalizeSessao(d)),
-    createVinculo:     procedure<{ sessao_id: number; atividade_id: number; prioridade: string }, object>(d => db.createVinculo(d)),
-    getSessoesByRange: procedure<{ inicio: string; fim: string }, object[]>(r => db.getSessoesByRange(r)),
+    getTemas:          procedure<void, Tema[]>(() => useCasesRef!.temas.getTemas()),
+    createTema:        procedure<{ nome: string; cor_hex?: string }, Tema>(d => useCasesRef!.temas.createTema(d)),
+    updateTema:        procedure<{ id: number; nome: string; cor_hex: string }, Tema>(d => useCasesRef!.temas.updateTema(d)),
+    deleteTema:        procedure<number, void>(id => useCasesRef!.temas.deleteTema(id)),
+    getAtividades:     procedure<{ tema_id?: number; status?: string }, Atividade[]>(f => useCasesRef!.atividades.getAtividades(f)),
+    createAtividade:   procedure<{ tema_id?: number | null; nome: string; status?: string }, Atividade>(d => useCasesRef!.atividades.createAtividade(d)),
+    updateAtividade:   procedure<{ id: number; tema_id?: number | null; nome: string; status: string }, Atividade>(d => useCasesRef!.atividades.updateAtividade(d)),
+    deleteAtividade:   procedure<number, void>(id => useCasesRef!.atividades.deleteAtividade(id)),
+    createSessao:      procedure<{ tipo: string; inicio: string }, Pick<Sessao, 'id' | 'tipo' | 'inicio'>>(d => useCasesRef!.sessoes.createSessao(d)),
+    finalizeSessao:    procedure<{ id: number; fim: string; duracao_total_segundos: number }, void>(d => useCasesRef!.sessoes.finalizeSessao(d)),
+    createVinculo:     procedure<{ sessao_id: number; atividade_id: number; prioridade: string }, void>(d => useCasesRef!.sessoes.createVinculo(d)),
+    getSessoesByRange: procedure<{ inicio: string; fim: string }, Sessao[]>(r => useCasesRef!.sessoes.getSessoesByRange(r)),
   },
 
   tray: {

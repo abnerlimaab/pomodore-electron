@@ -2,8 +2,15 @@ import { app, BrowserWindow, Tray, nativeImage } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { initDatabase } from './database';
+import { SqliteTemaRepository } from './infrastructure/db/SqliteTemaRepository';
+import { SqliteAtividadeRepository } from './infrastructure/db/SqliteAtividadeRepository';
+import { SqliteSessaoRepository } from './infrastructure/db/SqliteSessaoRepository';
+import { TemaUseCases } from './application/TemaUseCases';
+import { AtividadeUseCases } from './application/AtividadeUseCases';
+import { SessaoUseCases } from './application/SessaoUseCases';
 import { registerRouter, initRouter } from './ipc/router';
 import { initTrayHandler, updateTrayMenu } from './handlers/tray';
+import { IPC } from './ipc-channels';
 
 // Handle squirrel events on Windows (only when package is installed)
 try {
@@ -75,21 +82,29 @@ function createWindow(): BrowserWindow {
 
 app.whenReady().then(async () => {
   const store = await loadStore();
-  await initDatabase();
+  const conn = await initDatabase();
 
-  // Register all IPC handlers before creating the window
+  // ── Composition root ─────────────────────────────────────────────────────
+  const temaRepo      = new SqliteTemaRepository(conn);
+  const atividadeRepo = new SqliteAtividadeRepository(conn);
+  const sessaoRepo    = new SqliteSessaoRepository(conn);
+
+  const useCases = {
+    temas:      new TemaUseCases(temaRepo),
+    atividades: new AtividadeUseCases(atividadeRepo),
+    sessoes:    new SessaoUseCases(sessaoRepo),
+  };
+  // ─────────────────────────────────────────────────────────────────────────
+
   registerRouter();
-
   const mainWindow = createWindow();
-
-  // Pass references to handlers that need to communicate back to the renderer
-  initRouter(mainWindow, store);
+  initRouter(mainWindow, store, useCases);
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     const interrupted = store.get('interruptedSession');
     if (interrupted) {
-      mainWindow.webContents.send('session:checkInterrupted', interrupted);
+      mainWindow.webContents.send(IPC.SESSION.CHECK_INTERRUPTED, interrupted);
     }
   });
 
