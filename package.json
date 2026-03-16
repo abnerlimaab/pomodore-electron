@@ -1,0 +1,62 @@
+{
+  "name": "pomodore",
+  "version": "0.1.0",
+  "description": "A Pomodoro timer app built with Electron and React",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "build": "vite build && electron-builder",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18",
+    "react-dom": "^18",
+    "@mui/material": "^5",
+    "@mui/icons-material": "^5",
+    "@emotion/react": "^11",
+    "@emotion/styled": "^11",
+    "recharts": "^2",
+    "zustand": "^4",
+    "sql.js": "^1.12.0",
+    "electron-store": "^8"
+  },
+  "devDependencies": {
+    "vite": "^5",
+    "@vitejs/plugin-react": "^4",
+    "electron": "^29",
+    "electron-builder": "^24",
+    "concurrently": "^8",
+    "wait-on": "^7"
+  },
+  "build": {
+    "appId": "com.pomodore.app",
+    "productName": "Pomodore",
+    "icon": "icon.png",
+    "directories": {
+      "output": "dist-electron-build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "icon.png",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "icon.png"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "extraResources": [
+      {
+        "from": "electron/",
+        "to": "electron/",
+        "filter": ["**/*"]
+      }
+    ]
+  }
+}
