@@ -1,7 +1,13 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification, shell } from 'electron';
+import { app, BrowserWindow, Tray, nativeImage } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import * as dbModule from './database';
+import { initDatabase } from './database';
+import { IPC } from './ipc-channels';
+import { registerDatabaseHandlers } from './handlers/database';
+import { registerTrayHandlers, initTrayHandler, updateTrayMenu } from './handlers/tray';
+import { registerNotificationHandlers } from './handlers/notifications';
+import { registerTimerHandlers, initTimerHandler } from './handlers/timer';
+import { registerStoreHandlers, initStoreHandler } from './handlers/store';
 
 // Handle squirrel events on Windows (only when package is installed)
 try {
@@ -9,29 +15,29 @@ try {
   if (require('electron-squirrel-startup')) app.quit();
 } catch (_) {}
 
-let mainWindow: BrowserWindow | null = null;
-let tray: Tray | null = null;
-let store: { get: (key: string) => unknown; set: (key: string, value: unknown) => void } | null = null;
-let timerTimeout: ReturnType<typeof setTimeout> | null = null;
+// ─── Store ────────────────────────────────────────────────────────────────────
 
-// Lazy load electron-store (ESM in v9+)
-async function loadStore(): Promise<void> {
+type SimpleStore = { get: (key: string) => unknown; set: (key: string, value: unknown) => void };
+
+async function loadStore(): Promise<SimpleStore> {
   try {
     const { default: ElectronStore } = await import('electron-store');
-    store = new ElectronStore() as typeof store;
-  } catch (_e) {
+    return new ElectronStore() as SimpleStore;
+  } catch {
     const storePath = path.join(app.getPath('userData'), 'store.json');
     let data: Record<string, unknown> = {};
     try { data = JSON.parse(fs.readFileSync(storePath, 'utf-8')); } catch {}
-    store = {
-      get: (key: string) => data[key],
-      set: (key: string, value: unknown) => {
+    return {
+      get: (key) => data[key],
+      set: (key, value) => {
         data[key] = value;
         fs.writeFileSync(storePath, JSON.stringify(data, null, 2));
       },
     };
   }
 }
+
+// ─── Window ───────────────────────────────────────────────────────────────────
 
 function getIconPath(): string {
   const iconFile = 'icon.png';
@@ -40,28 +46,8 @@ function getIconPath(): string {
   return fs.existsSync(prodPath) ? prodPath : devPath;
 }
 
-function updateTrayMenu(timeText: string | null, isRunning: boolean): void {
-  if (!tray) return;
-  const contextMenu = Menu.buildFromTemplate([
-    { label: timeText || 'Pomodore', enabled: false },
-    { type: 'separator' },
-    {
-      label: isRunning ? 'Pausar' : 'Retomar',
-      click: () => { mainWindow?.webContents.send('tray-toggle-play'); },
-    },
-    {
-      label: 'Abrir app',
-      click: () => { mainWindow?.show(); },
-    },
-    { type: 'separator' },
-    { label: 'Sair', click: () => app.quit() },
-  ]);
-  tray.setToolTip(timeText || 'Pomodore');
-  tray.setContextMenu(contextMenu);
-}
-
-function createWindow(): void {
-  mainWindow = new BrowserWindow({
+function createWindow(): BrowserWindow {
+  const mainWindow = new BrowserWindow({
     width: 1000,
     height: 700,
     minWidth: 500,
@@ -71,6 +57,7 @@ function createWindow(): void {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
     },
     show: false,
     autoHideMenuBar: true,
@@ -78,7 +65,6 @@ function createWindow(): void {
   });
 
   const isDev = process.env.NODE_ENV !== 'production' && !app.isPackaged;
-
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
@@ -86,33 +72,44 @@ function createWindow(): void {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow?.show();
-    const interrupted = store ? store.get('interruptedSession') : null;
-    if (interrupted) {
-      mainWindow?.webContents.send('check-interrupted-session', interrupted);
-    }
-  });
-
-  mainWindow.on('close', (_e) => {
-    if (process.platform !== 'darwin') {
-      // On Windows/Linux, hide to tray; actual quit from tray menu
-    }
-  });
+  return mainWindow;
 }
 
+// ─── App lifecycle ────────────────────────────────────────────────────────────
+
 app.whenReady().then(async () => {
-  await loadStore();
-  await dbModule.initDatabase();
+  // Initialize services (main process only — renderer never touches these)
+  const store = await loadStore();
+  await initDatabase();
 
-  createWindow();
+  // Register all IPC handlers before creating the window
+  registerDatabaseHandlers();
+  registerNotificationHandlers();
+  registerStoreHandlers();
+  initStoreHandler(store);
+  registerTimerHandlers();
+  registerTrayHandlers();
 
+  const mainWindow = createWindow();
+
+  // Pass references to handlers that need to communicate back to the renderer
+  initTimerHandler(mainWindow);
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+    const interrupted = store.get('interruptedSession');
+    if (interrupted) {
+      mainWindow.webContents.send(IPC.SESSION.CHECK_INTERRUPTED, interrupted);
+    }
+  });
+
+  // Create tray
   try {
     const icon = nativeImage.createFromPath(getIconPath());
-    tray = new Tray(icon);
-    tray.setToolTip('Pomodore');
+    const tray = new Tray(icon);
+    initTrayHandler(tray, mainWindow);
     updateTrayMenu('Pomodore', false);
-    tray.on('double-click', () => { mainWindow?.show(); });
+    tray.on('double-click', () => mainWindow.show());
   } catch (e) {
     console.error('Tray creation failed:', e);
   }
@@ -125,109 +122,3 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
-
-// ─── IPC Handlers - Database ──────────────────────────────────────────────────
-
-ipcMain.handle('db:getTemas', () => {
-  try { return dbModule.getTemas(); } catch (e: unknown) { return { error: (e as Error).message }; }
-});
-
-ipcMain.handle('db:createTema', (_e, data) => {
-  try { return dbModule.createTema(data); } catch (e: unknown) { return { error: (e as Error).message }; }
-});
-
-ipcMain.handle('db:updateTema', (_e, data) => {
-  try { return dbModule.updateTema(data); } catch (e: unknown) { return { error: (e as Error).message }; }
-});
-
-ipcMain.handle('db:deleteTema', (_e, id) => {
-  try { return dbModule.deleteTema(id); } catch (e: unknown) { return { error: (e as Error).message }; }
-});
-
-ipcMain.handle('db:getAtividades', (_e, filters) => {
-  try { return dbModule.getAtividades(filters); } catch (e: unknown) { return { error: (e as Error).message }; }
-});
-
-ipcMain.handle('db:createAtividade', (_e, data) => {
-  try { return dbModule.createAtividade(data); } catch (e: unknown) { return { error: (e as Error).message }; }
-});
-
-ipcMain.handle('db:updateAtividade', (_e, data) => {
-  try { return dbModule.updateAtividade(data); } catch (e: unknown) { return { error: (e as Error).message }; }
-});
-
-ipcMain.handle('db:deleteAtividade', (_e, id) => {
-  try { return dbModule.deleteAtividade(id); } catch (e: unknown) { return { error: (e as Error).message }; }
-});
-
-ipcMain.handle('db:createSessao', (_e, data) => {
-  try { return dbModule.createSessao(data); } catch (e: unknown) { return { error: (e as Error).message }; }
-});
-
-ipcMain.handle('db:finalizeSessao', (_e, data) => {
-  try { return dbModule.finalizeSessao(data); } catch (e: unknown) { return { error: (e as Error).message }; }
-});
-
-ipcMain.handle('db:createVinculo', (_e, data) => {
-  try { return dbModule.createVinculo(data); } catch (e: unknown) { return { error: (e as Error).message }; }
-});
-
-ipcMain.handle('db:getSessoesByRange', (_e, range) => {
-  try { return dbModule.getSessoesByRange(range); } catch (e: unknown) { return { error: (e as Error).message }; }
-});
-
-// ─── IPC Handlers - Tray ─────────────────────────────────────────────────────
-
-ipcMain.handle('tray:updateTime', (_e, { timeText, isRunning }: { timeText: string; isRunning: boolean }) => {
-  try {
-    updateTrayMenu(timeText, isRunning);
-    return { success: true };
-  } catch (e: unknown) { return { error: (e as Error).message }; }
-});
-
-// ─── IPC Handlers - Notifications ────────────────────────────────────────────
-
-ipcMain.handle('notification:show', (_e, { title, body }: { title: string; body: string }) => {
-  try {
-    if (Notification.isSupported()) {
-      new Notification({ title, body }).show();
-    }
-    return { success: true };
-  } catch (e: unknown) { return { error: (e as Error).message }; }
-});
-
-// ─── IPC Handlers - Timer ────────────────────────────────────────────────────
-
-ipcMain.handle('timer:schedule', (_e, { finishAt, label }: { finishAt: number; label: string }) => {
-  if (timerTimeout) { clearTimeout(timerTimeout); timerTimeout = null; }
-  const delay = Math.max(0, finishAt - Date.now());
-  timerTimeout = setTimeout(() => {
-    timerTimeout = null;
-    if (Notification.isSupported()) {
-      new Notification({ title: 'Pomodore - Sessão Concluída!', body: `Sessão "${label}" finalizada.` }).show();
-    }
-    mainWindow?.webContents.send('timer-finished');
-  }, delay);
-  return { success: true };
-});
-
-ipcMain.handle('timer:cancel', () => {
-  if (timerTimeout) { clearTimeout(timerTimeout); timerTimeout = null; }
-  return { success: true };
-});
-
-// ─── IPC Handlers - Store ────────────────────────────────────────────────────
-
-ipcMain.handle('store:get', (_e, key: string) => {
-  try { return store ? store.get(key) : null; } catch (_e) { return null; }
-});
-
-ipcMain.handle('store:set', (_e, key: string, value: unknown) => {
-  try {
-    if (store) store.set(key, value);
-    return { success: true };
-  } catch (e: unknown) { return { error: (e as Error).message }; }
-});
-
-// Explicitly avoid unused import warning
-void shell;
