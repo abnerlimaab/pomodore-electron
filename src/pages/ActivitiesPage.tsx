@@ -11,6 +11,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CircleIcon from '@mui/icons-material/Circle';
 import useAppStore from '../store/useAppStore';
+import { ipc } from '../lib/ipc';
 import type { Tema, Atividade } from '../types';
 
 const PRESET_COLORS = [
@@ -72,21 +73,18 @@ export default function ActivitiesPage() {
   const [atividadeForm, setAtividadeForm] = useState<{ nome: string; tema_id: number | ''; status: string }>({ nome: '', tema_id: '', status: 'ativa' });
   const [atividadeNomeError, setAtividadeNomeError] = useState('');
 
-  const api = window.electronAPI?.db;
-
   const loadGrupos = async () => {
-    if (!api) return;
-    const data = await api.getTemas();
-    if (!('error' in (data as object))) setGrupos(data || []);
+    const data = await ipc.db.getTemas();
+    setGrupos(data || []);
   };
 
   const loadAtividades = async () => {
-    if (!api) return;
-    const data = await api.getAtividades({});
-    if (!('error' in (data as object))) setAtividades(data || []);
+    const data = await ipc.db.getAtividades({});
+    setAtividades(data || []);
   };
 
   useEffect(() => {
+    if (!window.__ipc) return;
     loadGrupos();
     loadAtividades();
   }, []);
@@ -108,7 +106,7 @@ export default function ActivitiesPage() {
   };
 
   const handleSaveGrupo = async () => {
-    if (!grupoForm.nome.trim() || !api) return;
+    if (!grupoForm.nome.trim()) return;
     const nome = grupoForm.nome.trim();
     const editingId = grupoDialog.editing?.id;
     const duplicate = typedGrupos.find(g => g.nome.toLowerCase() === nome.toLowerCase() && g.id !== editingId);
@@ -116,9 +114,9 @@ export default function ActivitiesPage() {
     setGrupoNomeError('');
     const payload = { ...grupoForm, nome };
     if (editingId) {
-      await api.updateTema({ id: editingId, ...payload });
+      await ipc.db.updateTema({ id: editingId, ...payload });
     } else {
-      await api.createTema(payload);
+      await ipc.db.createTema(payload);
     }
     setGrupoDialog({ open: false, editing: null });
     await loadGrupos();
@@ -126,8 +124,8 @@ export default function ActivitiesPage() {
   };
 
   const handleDeleteGrupo = async () => {
-    if (!api || !deleteDialog.item) return;
-    await api.deleteTema((deleteDialog.item as Tema).id);
+    if (!deleteDialog.item) return;
+    await ipc.db.deleteTema((deleteDialog.item as Tema).id);
     setDeleteDialog({ open: false, type: null, item: null });
     if (selectedGrupo?.id === (deleteDialog.item as Tema).id) setSelectedGrupo(null);
     await loadGrupos();
@@ -148,7 +146,7 @@ export default function ActivitiesPage() {
   };
 
   const handleSaveAtividade = async () => {
-    if (!atividadeForm.nome.trim() || !api) return;
+    if (!atividadeForm.nome.trim()) return;
     const nome = atividadeForm.nome.trim();
     const editingId = atividadeDialog.editing?.id;
     const duplicate = typedAtividades.find(a => a.nome.toLowerCase() === nome.toLowerCase() && a.id !== editingId);
@@ -156,9 +154,9 @@ export default function ActivitiesPage() {
     setAtividadeNomeError('');
     const payload = { ...atividadeForm, nome, tema_id: atividadeForm.tema_id !== '' ? atividadeForm.tema_id : null };
     if (editingId) {
-      await api.updateAtividade({ id: editingId, ...payload, status: payload.status as 'ativa' | 'inativa' });
+      await ipc.db.updateAtividade({ id: editingId, ...payload, status: payload.status as 'ativa' | 'inativa' });
     } else {
-      await api.createAtividade({ ...payload, status: payload.status as 'ativa' | 'inativa' });
+      await ipc.db.createAtividade({ ...payload, status: payload.status as 'ativa' | 'inativa' });
     }
     setAtividadeDialog({ open: false, editing: null });
     await loadAtividades();
@@ -166,17 +164,16 @@ export default function ActivitiesPage() {
   };
 
   const handleDeleteAtividade = async () => {
-    if (!api || !deleteDialog.item) return;
-    await api.deleteAtividade((deleteDialog.item as Atividade).id);
+    if (!deleteDialog.item) return;
+    await ipc.db.deleteAtividade((deleteDialog.item as Atividade).id);
     setDeleteDialog({ open: false, type: null, item: null });
     await loadAtividades();
     setSnackbar({ open: true, message: 'Atividade excluída!', severity: 'info' });
   };
 
   const handleToggleStatus = async (atividade: Atividade) => {
-    if (!api) return;
     const newStatus = atividade.status === 'ativa' ? 'inativa' : 'ativa';
-    await api.updateAtividade({ ...atividade, status: newStatus, tema_id: atividade.tema_id ?? null });
+    await ipc.db.updateAtividade({ ...atividade, status: newStatus, tema_id: atividade.tema_id ?? null });
     await loadAtividades();
   };
 

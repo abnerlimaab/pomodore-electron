@@ -1,3 +1,5 @@
+import { ipc } from '../lib/ipc';
+
 export function formatTimeForTray(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined) return '--:--';
   const m = Math.floor(seconds / 60);
@@ -10,10 +12,10 @@ export async function updateTray(
   isRunning: boolean,
   modeName: string
 ): Promise<void> {
-  if (!window.electronAPI) return;
+  if (!window.__ipc) return;
   const timeText = `${modeName || 'Timer'} - ${formatTimeForTray(timeLeft)}`;
   try {
-    await window.electronAPI.tray.updateTime({ timeText, isRunning });
+    await ipc.tray.updateTime({ timeText, isRunning });
   } catch (e) {
     console.error('Failed to update tray:', e);
   }

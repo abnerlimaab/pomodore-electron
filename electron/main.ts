@@ -2,12 +2,8 @@ import { app, BrowserWindow, Tray, nativeImage } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { initDatabase } from './database';
-import { IPC } from './ipc-channels';
-import { registerDatabaseHandlers } from './handlers/database';
-import { registerTrayHandlers, initTrayHandler, updateTrayMenu } from './handlers/tray';
-import { registerNotificationHandlers } from './handlers/notifications';
-import { registerTimerHandlers, initTimerHandler } from './handlers/timer';
-import { registerStoreHandlers, initStoreHandler } from './handlers/store';
+import { registerRouter, initRouter } from './ipc/router';
+import { initTrayHandler, updateTrayMenu } from './handlers/tray';
 
 // Handle squirrel events on Windows (only when package is installed)
 try {
@@ -78,28 +74,22 @@ function createWindow(): BrowserWindow {
 // ─── App lifecycle ────────────────────────────────────────────────────────────
 
 app.whenReady().then(async () => {
-  // Initialize services (main process only — renderer never touches these)
   const store = await loadStore();
   await initDatabase();
 
   // Register all IPC handlers before creating the window
-  registerDatabaseHandlers();
-  registerNotificationHandlers();
-  registerStoreHandlers();
-  initStoreHandler(store);
-  registerTimerHandlers();
-  registerTrayHandlers();
+  registerRouter();
 
   const mainWindow = createWindow();
 
   // Pass references to handlers that need to communicate back to the renderer
-  initTimerHandler(mainWindow);
+  initRouter(mainWindow, store);
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     const interrupted = store.get('interruptedSession');
     if (interrupted) {
-      mainWindow.webContents.send(IPC.SESSION.CHECK_INTERRUPTED, interrupted);
+      mainWindow.webContents.send('session:checkInterrupted', interrupted);
     }
   });
 

@@ -51,48 +51,17 @@ export interface InterruptedSession {
   selectedActivities: SelectedActivity[];
 }
 
-// ─── Electron API exposed via contextBridge ───────────────────────────────────
-
-export interface ElectronAPI {
-  db: {
-    getTemas: () => Promise<Tema[]>;
-    createTema: (data: Omit<Tema, 'id'>) => Promise<Tema>;
-    updateTema: (data: Tema) => Promise<Tema>;
-    deleteTema: (id: number) => Promise<{ success: true }>;
-    getAtividades: (filters: { tema_id?: number; status?: string }) => Promise<Atividade[]>;
-    createAtividade: (data: Pick<Atividade, 'nome' | 'status' | 'tema_id'>) => Promise<Atividade>;
-    updateAtividade: (data: Pick<Atividade, 'id' | 'nome' | 'status' | 'tema_id'>) => Promise<Atividade>;
-    deleteAtividade: (id: number) => Promise<{ success: true }>;
-    createSessao: (data: { tipo: string; inicio: string }) => Promise<Sessao>;
-    finalizeSessao: (data: { id: number; fim: string; duracao_total_segundos: number }) => Promise<Sessao>;
-    createVinculo: (data: { sessao_id: number; atividade_id: number; prioridade: string }) => Promise<object>;
-    getSessoesByRange: (range: { inicio: string; fim: string }) => Promise<Sessao[]>;
-  };
-  tray: {
-    updateTime: (data: { timeText: string; isRunning: boolean }) => Promise<{ success: true }>;
-  };
-  notification: {
-    show: (data: { title: string; body: string }) => Promise<{ success: true }>;
-  };
-  store: {
-    get: (key: string) => Promise<unknown>;
-    set: (key: string, value: unknown) => Promise<{ success: true }>;
-  };
-  timer: {
-    schedule: (data: { finishAt: number; label: string }) => Promise<{ success: true }>;
-    cancel: () => Promise<{ success: true }>;
-  };
-  onTimerFinished: (callback: () => void) => void;
-  removeTimerFinished: () => void;
-  onCheckInterrupted: (callback: (data: InterruptedSession) => void) => void;
-  removeCheckInterrupted: () => void;
-}
-
 // ─── Window augmentation ──────────────────────────────────────────────────────
 
 declare global {
   interface Window {
-    electronAPI?: ElectronAPI;
+    __ipc?: {
+      invoke: (channel: string, input?: unknown) => Promise<unknown>;
+    };
+    __ipcEvents?: {
+      on: (channel: string, cb: (data: unknown) => void) => void;
+      removeAllListeners: (channel: string) => void;
+    };
     webkitAudioContext?: typeof AudioContext;
   }
 }

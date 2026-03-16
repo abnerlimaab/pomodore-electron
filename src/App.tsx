@@ -6,6 +6,7 @@ import ActivitiesPage from './pages/ActivitiesPage';
 import ReportsPage from './pages/ReportsPage';
 import { createAppTheme } from './theme';
 import useAppStore from './store/useAppStore';
+import { ipc } from './lib/ipc';
 
 type Page = 'timer' | 'activities' | 'reports';
 
@@ -16,34 +17,21 @@ export default function App() {
   const theme = createAppTheme(colorScheme, palette);
 
   useEffect(() => {
-    const loadData = async () => {
-      if (!window.electronAPI?.db) return;
-      try {
-        const [grupos, atividades] = await Promise.all([
-          window.electronAPI.db.getTemas(),
-          window.electronAPI.db.getAtividades({}),
-        ]);
-        if (grupos && !('error' in grupos)) setGrupos(grupos);
-        if (atividades && !('error' in atividades)) setAtividades(atividades);
-      } catch (e) {
-        console.error('Failed to load initial data:', e);
-      }
-    };
-    loadData();
+    if (!window.__ipc) return;
+    Promise.all([
+      ipc.db.getTemas(),
+      ipc.db.getAtividades({}),
+    ]).then(([grupos, atividades]) => {
+      setGrupos(grupos);
+      setAtividades(atividades);
+    }).catch(e => console.error('Failed to load initial data:', e));
   }, []);
 
   useEffect(() => {
-    const refreshAtividades = async () => {
-      if (currentPage === 'timer' && window.electronAPI?.db) {
-        try {
-          const data = await window.electronAPI.db.getAtividades({});
-          if (data && !('error' in data)) setAtividades(data);
-        } catch (e) {
-          console.error('Failed to refresh atividades:', e);
-        }
-      }
-    };
-    refreshAtividades();
+    if (currentPage !== 'timer' || !window.__ipc) return;
+    ipc.db.getAtividades({})
+      .then(data => setAtividades(data))
+      .catch(e => console.error('Failed to refresh atividades:', e));
   }, [currentPage]);
 
   const renderPage = () => {

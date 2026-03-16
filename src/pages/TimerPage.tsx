@@ -16,6 +16,8 @@ import ModeSelector from '../components/Timer/ModeSelector';
 import ActivityChips from '../components/Timer/ActivityChips';
 import useAppStore from '../store/useAppStore';
 import { updateTray } from '../components/TrayManager';
+import { ipc } from '../lib/ipc';
+import { onTimerFinished, onCheckInterrupted } from '../lib/ipc-events';
 import type { InterruptedSession } from '../types';
 
 type SnackbarSeverity = 'success' | 'info' | 'warning' | 'error';
@@ -79,17 +81,15 @@ export default function TimerPage() {
   const isFree = currentMode === 'free';
 
   const saveSession = async (isPartial = false) => {
-    if (!window.electronAPI) return;
+    if (!window.__ipc) return;
 
     const now = new Date().toISOString();
     let sessaoId = currentSessionId;
 
     if (sessaoId == null) {
       const start = currentSessionStart || now;
-      const result = await window.electronAPI.db.createSessao({ tipo: modeData.tipo, inicio: start });
-      if (result && !('error' in result) && result.id != null) {
-        sessaoId = result.id as number;
-      }
+      const result = await ipc.db.createSessao({ tipo: modeData.tipo, inicio: start }) as { id?: number };
+      if (result?.id != null) sessaoId = result.id;
     }
 
     if (sessaoId != null) {
@@ -100,30 +100,19 @@ export default function TimerPage() {
         : isPartial
           ? totalSeconds - state.timeLeft
           : totalSeconds;
-      await window.electronAPI.db.finalizeSessao({ id: sessaoId, fim: now, duracao_total_segundos: Math.max(0, elapsed) });
+      await ipc.db.finalizeSessao({ id: sessaoId, fim: now, duracao_total_segundos: Math.max(0, elapsed) });
 
       for (const act of selectedActivities) {
-        await window.electronAPI.db.createVinculo({ sessao_id: sessaoId, atividade_id: act.id, prioridade: act.prioridade });
+        await ipc.db.createVinculo({ sessao_id: sessaoId, atividade_id: act.id, prioridade: act.prioridade });
       }
     }
 
-    if (window.electronAPI?.store) {
-      await window.electronAPI.store.set('interruptedSession', null);
-    }
-
+    await ipc.store.set({ key: 'interruptedSession', value: null });
     stopSession();
   };
 
   const handleTimerFinish = useCallback(async () => {
     playAlertBeep();
-
-    if (!window.electronAPI?.timer && window.electronAPI?.notification) {
-      await window.electronAPI.notification.show({
-        title: 'Pomodore - Sessão Concluída!',
-        body: `Sessão "${modeData.label}" finalizada.`,
-      });
-    }
-
     await saveSession(false);
     setSnackbar({ open: true, message: 'Sessão salva!', severity: 'success' });
     finishedRef.current = false;
@@ -133,7 +122,7 @@ export default function TimerPage() {
     if (isRunning) {
       intervalRef.current = setInterval(() => {
         const finished = tick();
-        if (finished && !window.electronAPI?.timer && !finishedRef.current) {
+        if (finished && !window.__ipc && !finishedRef.current) {
           finishedRef.current = true;
           clearInterval(intervalRef.current!);
           handleTimerFinish();
@@ -151,65 +140,62 @@ export default function TimerPage() {
   }, [timeLeft, isRunning, freeElapsed, isFree, modeData.label]);
 
   useEffect(() => {
-    if (window.electronAPI?.onTimerFinished) {
-      window.electronAPI.onTimerFinished(() => {
-        if (!finishedRef.current) {
-          finishedRef.current = true;
-          handleTimerFinish();
-        }
-      });
-      return () => window.electronAPI?.removeTimerFinished?.();
-    }
+    return onTimerFinished(() => {
+      if (!finishedRef.current) {
+        finishedRef.current = true;
+        handleTimerFinish();
+      }
+    });
   }, [handleTimerFinish]);
 
   useEffect(() => {
-    if (window.electronAPI?.onCheckInterrupted) {
-      window.electronAPI.onCheckInterrupted((data) => {
-        setInterruptedData(data);
-        setInterruptedDialogOpen(true);
-      });
-      return () => window.electronAPI?.removeCheckInterrupted?.();
-    }
+    return onCheckInterrupted((data) => {
+      setInterruptedData(data);
+      setInterruptedDialogOpen(true);
+    });
   }, []);
 
   const handleStart = async () => {
     finishedRef.current = false;
-    if (!window.electronAPI) { startSession(null); return; }
+    if (!window.__ipc) { startSession(null); return; }
     const now = new Date().toISOString();
-    const result = await window.electronAPI.db.createSessao({ tipo: modeData.tipo, inicio: now });
-    const sessaoId = result && !('error' in result) && result.id != null ? result.id as number : null;
+    const result = await ipc.db.createSessao({ tipo: modeData.tipo, inicio: now }) as { id?: number };
+    const sessaoId = result?.id ?? null;
     startSession(sessaoId);
-    if (!isFree && window.electronAPI.timer) {
+    if (!isFree) {
       const totalSeconds = currentMode === 'custom' ? customSeconds : (modeData.seconds ?? 0);
-      await window.electronAPI.timer.schedule({ finishAt: Date.now() + totalSeconds * 1000, label: modeData.label });
+      await ipc.timer.schedule({ finishAt: Date.now() + totalSeconds * 1000, label: modeData.label });
     }
   };
 
   const handlePause = async () => {
-    window.electronAPI?.timer?.cancel();
+    ipc.timer.cancel();
     pauseSession();
-    if (window.electronAPI?.store) {
-      await window.electronAPI.store.set('interruptedSession', {
-        sessaoId: currentSessionId,
-        start: currentSessionStart,
-        tipo: modeData.tipo,
-        timeLeft,
-        mode: currentMode,
-        customSeconds,
-        selectedActivities,
+    if (window.__ipc) {
+      await ipc.store.set({
+        key: 'interruptedSession',
+        value: {
+          sessaoId: currentSessionId,
+          start: currentSessionStart,
+          tipo: modeData.tipo,
+          timeLeft,
+          mode: currentMode,
+          customSeconds,
+          selectedActivities,
+        },
       });
     }
   };
 
   const handleResume = () => {
     resumeSession();
-    if (!isFree && window.electronAPI?.timer) {
-      window.electronAPI.timer.schedule({ finishAt: Date.now() + timeLeft * 1000, label: modeData.label });
+    if (!isFree) {
+      ipc.timer.schedule({ finishAt: Date.now() + timeLeft * 1000, label: modeData.label });
     }
   };
 
   const handleStop = () => {
-    window.electronAPI?.timer?.cancel();
+    ipc.timer.cancel();
     if (isRunning || isPaused) {
       pauseSession();
       setStopDialogOpen(true);
@@ -226,33 +212,29 @@ export default function TimerPage() {
 
   const handleStopDiscard = () => {
     setStopDialogOpen(false);
-    if (window.electronAPI?.store) {
-      window.electronAPI.store.set('interruptedSession', null);
-    }
+    if (window.__ipc) ipc.store.set({ key: 'interruptedSession', value: null });
     stopSession();
   };
 
   const handleInterruptedSave = async () => {
     setInterruptedDialogOpen(false);
-    if (!interruptedData || !window.electronAPI) return;
+    if (!interruptedData || !window.__ipc) return;
     const now = new Date().toISOString();
     const sessaoId = interruptedData.sessaoId;
     if (sessaoId) {
       const elapsed = interruptedData.timeLeft != null
         ? (interruptedData.customSeconds || 1500) - interruptedData.timeLeft
         : 0;
-      await window.electronAPI.db.finalizeSessao({ id: sessaoId, fim: now, duracao_total_segundos: Math.max(0, elapsed) });
+      await ipc.db.finalizeSessao({ id: sessaoId, fim: now, duracao_total_segundos: Math.max(0, elapsed) });
     }
-    await window.electronAPI.store.set('interruptedSession', null);
+    await ipc.store.set({ key: 'interruptedSession', value: null });
     setSnackbar({ open: true, message: 'Sessão anterior salva!', severity: 'success' });
     setInterruptedData(null);
   };
 
   const handleInterruptedDiscard = async () => {
     setInterruptedDialogOpen(false);
-    if (window.electronAPI?.store) {
-      await window.electronAPI.store.set('interruptedSession', null);
-    }
+    if (window.__ipc) await ipc.store.set({ key: 'interruptedSession', value: null });
     setInterruptedData(null);
   };
 

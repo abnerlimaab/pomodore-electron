@@ -10,6 +10,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts';
+import { ipc } from '../lib/ipc';
 import type { Sessao, AtividadeSessao } from '../types';
 
 const CHART_COLORS = [
@@ -173,12 +174,12 @@ export default function ReportsPage() {
   const [selectedGroup, setSelectedGroup] = useState('');
 
   const loadSessions = async () => {
-    if (!window.electronAPI?.db) return;
+    if (!window.__ipc) return;
     setLoading(true);
     try {
       const range = getDateRange(filter);
-      const data = await window.electronAPI.db.getSessoesByRange(range);
-      setSessions(Array.isArray(data) ? data : []);
+      const data = await ipc.db.getSessoesByRange(range);
+      setSessions(Array.isArray(data) ? data as Sessao[] : []);
     } catch (e) {
       console.error('Failed to load sessions:', e);
       setSessions([]);
