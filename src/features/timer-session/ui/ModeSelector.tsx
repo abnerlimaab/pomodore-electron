@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import {
-  Box, Select, MenuItem, FormControl, ListSubheader,
+  Select, MenuItem, FormControl, ListSubheader,
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, Typography, Stack, SelectChangeEvent,
 } from '@mui/material';
-import type { ModeKey } from '../../../entities/timer';
+import type { ModeKey } from '@/entities/timer';
 
 interface ModeSelectorProps {
   currentMode: ModeKey;

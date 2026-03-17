@@ -3,17 +3,17 @@ import {
   Box, Typography, Button, List, ListItem, ListItemText,
   IconButton, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, Chip, Tooltip,
-  Divider, Alert, Snackbar, Paper, MenuItem, Select,
+  Divider, Alert, Snackbar, MenuItem, Select,
   FormControl, InputLabel, SelectChangeEvent,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CircleIcon from '@mui/icons-material/Circle';
-import { useTemaStore } from '../../../entities/tema';
-import { useAtividadeStore } from '../../../entities/atividade';
-import { ipc } from '../../../shared/api/ipc';
-import type { Tema, Atividade } from '../../../shared/types';
+import { useTemaStore } from '@/entities/tema';
+import { useAtividadeStore } from '@/entities/atividade';
+import { ipc } from '@/shared/api/ipc';
+import type { Tema, Atividade } from '@/shared/types';
 
 const PRESET_COLORS = [
   '#6750A4', '#B5262B', '#1B6B3A', '#1565C0', '#E65100',
@@ -245,7 +245,7 @@ export default function ActivitiesPage() {
         <List sx={{ overflow: 'auto', flex: 1, py: 1 }}>
           {filteredAtividades.length === 0 && (
             <Box sx={{ p: 4, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">Nenhuma atividade. Clique em "Adicionar" para criar.</Typography>
+              <Typography variant="body2" color="text.secondary">{'Nenhuma atividade. Clique em "Adicionar" para criar.'}</Typography>
             </Box>
           )}
           {filteredAtividades.map((atividade) => (
@@ -331,7 +331,7 @@ export default function ActivitiesPage() {
         <DialogTitle>Confirmar Exclusão</DialogTitle>
         <DialogContent>
           <Typography variant="body2">
-            Tem certeza que deseja excluir "{(deleteDialog.item as Tema | Atividade)?.nome}"?
+            Tem certeza que deseja excluir &quot;{(deleteDialog.item as Tema | Atividade)?.nome}&quot;?
             {deleteDialog.type === 'grupo' && ' As atividades deste grupo não serão excluídas, mas perderão a associação.'}
           </Typography>
         </DialogContent>

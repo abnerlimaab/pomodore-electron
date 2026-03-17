@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Box, CssBaseline, ThemeProvider } from '@mui/material';
-import { NavigationRail, RAIL_COLLAPSED, RAIL_EXPANDED } from '../widgets/navigation-rail';
-import { TimerPage } from '../pages/timer';
-import { ActivitiesPage } from '../pages/activities';
-import { ReportsPage } from '../pages/reports';
-import { createAppTheme } from '../shared/config/theme';
-import { useUiSettingsStore } from '../shared/model/uiSettingsStore';
-import { useTemaStore } from '../entities/tema';
-import { useAtividadeStore } from '../entities/atividade';
-import { ipc } from '../shared/api/ipc';
+import { NavigationRail, RAIL_COLLAPSED, RAIL_EXPANDED } from '@/widgets/navigation-rail';
+import { TimerPage } from '@/pages/timer';
+import { ActivitiesPage } from '@/pages/activities';
+import { ReportsPage } from '@/pages/reports';
+import { createAppTheme } from '@/shared/config/theme';
+import { useUiSettingsStore } from '@/shared/model/uiSettingsStore';
+import { useTemaStore } from '@/entities/tema';
+import { useAtividadeStore } from '@/entities/atividade';
+import { ipc } from '@/shared/api/ipc';
 
 type Page = 'timer' | 'activities' | 'reports';
 

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Tema } from '../../../shared/types';
+import type { Tema } from '@/shared/types';
 
 interface TemaState {
   grupos: Tema[];

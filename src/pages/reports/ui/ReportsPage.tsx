@@ -10,8 +10,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts';
-import { ipc } from '../../../shared/api/ipc';
-import type { Sessao, AtividadeSessao } from '../../../shared/types';
+import { ipc } from '@/shared/api/ipc';
+import type { Sessao, AtividadeSessao } from '@/shared/types';
 
 const CHART_COLORS = [
   '#6750A4', '#B5262B', '#1B6B3A', '#1565C0', '#E65100',
@@ -104,7 +104,7 @@ function GroupedTimeline({ sessions }: GroupedTimelineProps) {
       groups.push(group);
       groupMap.set(label, group);
     }
-    groupMap.get(label)!.sessions.push(s);
+    groupMap.get(label)?.sessions.push(s);
   });
 
   return (

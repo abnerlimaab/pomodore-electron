@@ -19,7 +19,9 @@ export const ipc = new Proxy({} as IpcClient<AppRouter>, {
       get(_target2, proc: string) {
         return (input?: unknown) => {
           const channel = `${namespace}.${proc}`;
-          return window.__ipc!.invoke(channel, input).then((res) => {
+          const bridge = window.__ipc;
+          if (!bridge) return Promise.reject(new Error('IPC bridge not available'));
+          return bridge.invoke(channel, input).then((res) => {
             const envelope = res as Envelope<unknown>;
             if ('error' in envelope) throw new Error(envelope.error);
             return envelope.data;

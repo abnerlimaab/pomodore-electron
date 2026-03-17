@@ -14,9 +14,10 @@ import { IPC } from './ipc-channels';
 
 // Handle squirrel events on Windows (only when package is installed)
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   if (require('electron-squirrel-startup')) app.quit();
-} catch (_) {}
+} catch {
+  // Package absent in dev — expected
+}
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
@@ -29,7 +30,7 @@ async function loadStore(): Promise<SimpleStore> {
   } catch {
     const storePath = path.join(app.getPath('userData'), 'store.json');
     let data: Record<string, unknown> = {};
-    try { data = JSON.parse(fs.readFileSync(storePath, 'utf-8')); } catch {}
+    try { data = JSON.parse(fs.readFileSync(storePath, 'utf-8')); } catch { /* file doesn't exist yet */ }
     return {
       get: (key) => data[key],
       set: (key, value) => {

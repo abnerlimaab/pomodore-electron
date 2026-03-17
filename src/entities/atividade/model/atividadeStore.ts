@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { SelectedActivity, Atividade } from '../../../shared/types';
+import type { SelectedActivity, Atividade } from '@/shared/types';
 
 type SelectedActivityT = SelectedActivity;
 type AtividadeT = Atividade;

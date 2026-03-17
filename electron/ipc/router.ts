@@ -35,6 +35,11 @@ export interface AppUseCases {
 }
 let useCasesRef: AppUseCases | null = null;
 
+function uc(): AppUseCases {
+  if (!useCasesRef) throw new Error('[Router] Not initialized. Call initRouter() first.');
+  return useCasesRef;
+}
+
 export function initRouter(mainWindow: BrowserWindow, store: SimpleStore, useCases: AppUseCases): void {
   windowRef = mainWindow;
   storeRef = store;
@@ -46,18 +51,18 @@ export function initRouter(mainWindow: BrowserWindow, store: SimpleStore, useCas
 export const appRouter = {
 
   db: {
-    getTemas:          procedure<void, Tema[]>(() => useCasesRef!.temas.getTemas()),
-    createTema:        procedure<{ nome: string; cor_hex?: string }, Tema>(d => useCasesRef!.temas.createTema(d)),
-    updateTema:        procedure<{ id: number; nome: string; cor_hex: string }, Tema>(d => useCasesRef!.temas.updateTema(d)),
-    deleteTema:        procedure<number, void>(id => useCasesRef!.temas.deleteTema(id)),
-    getAtividades:     procedure<{ tema_id?: number; status?: string }, Atividade[]>(f => useCasesRef!.atividades.getAtividades(f)),
-    createAtividade:   procedure<{ tema_id?: number | null; nome: string; status?: string }, Atividade>(d => useCasesRef!.atividades.createAtividade(d)),
-    updateAtividade:   procedure<{ id: number; tema_id?: number | null; nome: string; status: string }, Atividade>(d => useCasesRef!.atividades.updateAtividade(d)),
-    deleteAtividade:   procedure<number, void>(id => useCasesRef!.atividades.deleteAtividade(id)),
-    createSessao:      procedure<{ tipo: string; inicio: string }, Pick<Sessao, 'id' | 'tipo' | 'inicio'>>(d => useCasesRef!.sessoes.createSessao(d)),
-    finalizeSessao:    procedure<{ id: number; fim: string; duracao_total_segundos: number }, void>(d => useCasesRef!.sessoes.finalizeSessao(d)),
-    createVinculo:     procedure<{ sessao_id: number; atividade_id: number; prioridade: string }, void>(d => useCasesRef!.sessoes.createVinculo(d)),
-    getSessoesByRange: procedure<{ inicio: string; fim: string }, Sessao[]>(r => useCasesRef!.sessoes.getSessoesByRange(r)),
+    getTemas:          procedure<void, Tema[]>(() => uc().temas.getTemas()),
+    createTema:        procedure<{ nome: string; cor_hex?: string }, Tema>(d => uc().temas.createTema(d)),
+    updateTema:        procedure<{ id: number; nome: string; cor_hex: string }, Tema>(d => uc().temas.updateTema(d)),
+    deleteTema:        procedure<number, void>(id => uc().temas.deleteTema(id)),
+    getAtividades:     procedure<{ tema_id?: number; status?: string }, Atividade[]>(f => uc().atividades.getAtividades(f)),
+    createAtividade:   procedure<{ tema_id?: number | null; nome: string; status?: string }, Atividade>(d => uc().atividades.createAtividade(d)),
+    updateAtividade:   procedure<{ id: number; tema_id?: number | null; nome: string; status: string }, Atividade>(d => uc().atividades.updateAtividade(d)),
+    deleteAtividade:   procedure<number, void>(id => uc().atividades.deleteAtividade(id)),
+    createSessao:      procedure<{ tipo: string; inicio: string }, Pick<Sessao, 'id' | 'tipo' | 'inicio'>>(d => uc().sessoes.createSessao(d)),
+    finalizeSessao:    procedure<{ id: number; fim: string; duracao_total_segundos: number }, void>(d => uc().sessoes.finalizeSessao(d)),
+    createVinculo:     procedure<{ sessao_id: number; atividade_id: number; prioridade: string }, void>(d => uc().sessoes.createVinculo(d)),
+    getSessoesByRange: procedure<{ inicio: string; fim: string }, Sessao[]>(r => uc().sessoes.getSessoesByRange(r)),
   },
 
   tray: {

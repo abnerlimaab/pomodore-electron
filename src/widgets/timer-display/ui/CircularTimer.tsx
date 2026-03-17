@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { formatTime } from '../../../shared/lib/formatTime';
+import { formatTime } from '@/shared/lib/formatTime';
 
 function useTimerSize(): number {
   const [size, setSize] = useState(240);

@@ -10,15 +10,15 @@ import {
   Alert,
   Snackbar,
 } from '@mui/material';
-import { CircularTimer } from '../../../widgets/timer-display';
-import { TimerControls, ModeSelector } from '../../../features/timer-session';
-import { ActivityChips } from '../../../features/select-activity';
-import { useTimerStore } from '../../../entities/timer';
-import { useAtividadeStore } from '../../../entities/atividade';
-import { updateTray } from '../../../shared/lib/tray';
-import { ipc } from '../../../shared/api/ipc';
-import { onTimerFinished, onCheckInterrupted } from '../../../shared/api/ipc-events';
-import type { InterruptedSession } from '../../../shared/types';
+import { CircularTimer } from '@/widgets/timer-display';
+import { TimerControls, ModeSelector } from '@/features/timer-session';
+import { ActivityChips } from '@/features/select-activity';
+import { useTimerStore } from '@/entities/timer';
+import { useAtividadeStore } from '@/entities/atividade';
+import { updateTray } from '@/shared/lib/tray';
+import { ipc } from '@/shared/api/ipc';
+import { onTimerFinished, onCheckInterrupted } from '@/shared/api/ipc-events';
+import type { InterruptedSession } from '@/shared/types';
 
 type SnackbarSeverity = 'success' | 'info' | 'warning' | 'error';
 
@@ -123,7 +123,8 @@ export default function TimerPage() {
         const finished = tick();
         if (finished && !window.__ipc && !finishedRef.current) {
           finishedRef.current = true;
-          clearInterval(intervalRef.current!);
+          const interval = intervalRef.current;
+          if (interval) clearInterval(interval);
           handleTimerFinish();
         }
       }, 1000);

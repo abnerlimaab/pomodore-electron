@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Box, Chip, Autocomplete, TextField, Typography, Tooltip, IconButton } from '@mui/material';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
-import { useAtividadeStore } from '../../../entities/atividade';
-import type { Atividade } from '../../../shared/types';
+import { useAtividadeStore } from '@/entities/atividade';
+import type { Atividade } from '@/shared/types';
 
 interface ActivityChipsProps {
   atividades: Atividade[];

@@ -16,8 +16,8 @@ import CategoryIcon from '@mui/icons-material/Category';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ThemeMenu from '../../../shared/ui/ThemeMenu';
-import { useUiSettingsStore } from '../../../shared/model/uiSettingsStore';
+import ThemeMenu from '@/shared/ui/ThemeMenu';
+import { useUiSettingsStore } from '@/shared/model/uiSettingsStore';
 
 export const RAIL_COLLAPSED = 60;
 export const RAIL_EXPANDED = 200;

@@ -44,6 +44,9 @@ export default tseslint.config(
       ],
       // Electron main process uses CommonJS — require() is valid in this context
       '@typescript-eslint/no-require-imports': 'off',
+      // void in generic type args of CallExpressions is valid TypeScript (e.g. procedure<void, X>)
+      // The strict preset bans this, but it is intentional in the IPC router type pattern.
+      '@typescript-eslint/no-invalid-void-type': 'off',
     },
   },
 
@@ -153,6 +156,8 @@ export default tseslint.config(
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
+      // void in generics and union types is valid in this codebase (ipc.ts conditional types)
+      '@typescript-eslint/no-invalid-void-type': 'off',
 
       // ── React rules ───────────────────────────────────────────────────────
       ...reactPlugin.configs.recommended.rules,
@@ -160,7 +165,11 @@ export default tseslint.config(
       ...reactPlugin.configs['jsx-runtime'].rules,
 
       // ── React Hooks rules ─────────────────────────────────────────────────
-      ...reactHooksPlugin.configs.recommended.rules,
+      // Only the two classic rules — v7 recommended also includes React Compiler
+      // analysis rules (preserve-manual-memoization, static-components, etc.)
+      // that require the React Compiler to be configured. We opt out of those.
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
 
       // ── FSD Architecture Guardian ─────────────────────────────────────────
       //
